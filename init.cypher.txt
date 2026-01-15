@@ -1,0 +1,24 @@
+// 1. SET UP CONSTRAINTS (Ensures no duplicate movies or people)
+CREATE CONSTRAINT movie_title IF NOT EXISTS FOR (m:Movie) REQUIRE m.title IS UNIQUE;
+CREATE CONSTRAINT person_name IF NOT EXISTS FOR (p:Person) REQUIRE p.name IS UNIQUE;
+
+// 2. CREATE SAMPLE DATA (Uses MERGE to avoid creating duplicates if run twice)
+MERGE (m1:Movie {title: 'The Matrix'})
+SET m1.summary = 'A computer hacker learns from mysterious rebels about the true nature of his reality.',
+    m1.released = 1999;
+
+MERGE (m2:Movie {title: 'The Shawshank Redemption'})
+SET m2.summary = 'Two imprisoned men bond over a number of years, finding solace and eventual redemption.',
+    m2.released = 1994;
+
+// 3. CREATE PEOPLE
+MERGE (keanu:Person {name: 'Keanu Reeves', born: 1964})
+MERGE (carrie:Person {name: 'Carrie-Anne Moss', born: 1967})
+MERGE (morgan:Person {name: 'Morgan Freeman', born: 1937})
+MERGE (frank:Person {name: 'Frank Darabont', born: 1959})
+
+// 4. CREATE RELATIONSHIPS
+MERGE (keanu)-[:ACTED_IN]->(m1)
+MERGE (carrie)-[:ACTED_IN]->(m1)
+MERGE (morgan)-[:ACTED_IN]->(m2)
+MERGE (frank)-[:DIRECTED]->(m2);

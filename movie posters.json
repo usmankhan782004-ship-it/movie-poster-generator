@@ -1,0 +1,233 @@
+{
+  "name": "movie posters",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        0
+      ],
+      "id": "7688d1f4-07d2-4a27-9d9e-4920d9f24869",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://a68e407c.databases.neo4j.io/db/neo4j/query/v2",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"statement\": \"MATCH (m:Movie)<-[:ACTED_IN|DIRECTED]-(p:Person) WITH m, collect(p.name) AS crew, rand() AS r ORDER BY r LIMIT 1 RETURN m.title AS title, m.summary AS summary, crew\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        160,
+        16
+      ],
+      "id": "24bae2f5-c7cf-4b03-9e53-cfbd3ff0a5fc",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "HUV9efyzvyXeKCwi",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-nano",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-NANO"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "={{ \"I have a movie called '\" + $json.data.values[0][0] + \"' starring \" + $json.data.values[0][2].join(', ') + \". The plot is: \" + $json.data.values[0][1] + \". Write a snappy, 2-sentence movie review/summary for a Discord channel. Make it sound exciting!\" }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        384,
+        16
+      ],
+      "id": "ee433f4c-17c9-4a23-ba3f-5c670f27dfa4",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "Bp9PeG9EvdZBwCrA",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "prompt": "={{ \"A professional cinematic movie poster. The only text on the poster must be the title '\" + $node[\"HTTP Request\"].json.data.values[0][0] + \"' written in massive, bold, high-contrast, perfectly spelled professional block letters. Visuals: One single, iconic, high-detail object or scene representing \" + $node[\"HTTP Request\"].json.data.values[0][1] + \". Style: Hollywood theatrical release, sharp focus, 8k, no other words or gibberish allowed.\" }}",
+        "options": {
+          "style": "vivid",
+          "returnImageUrls": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        448,
+        176
+      ],
+      "id": "615cd1dd-1474-4b25-b9b8-3ee6b1279867",
+      "name": "Generate an image",
+      "credentials": {
+        "openAiApi": {
+          "id": "Bp9PeG9EvdZBwCrA",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        704,
+        48
+      ],
+      "id": "703a8cf2-60d3-4a77-b6e3-b60b39a4e229",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "={{ \"🎥 **Graph-AI Cinema:** Successfully synthesized a new narrative for **\" + $node[\"HTTP Request\"].json.data.values[0][0] + \"** using Parallel Distributed Computing.\" }}",
+        "options": {},
+        "embeds": {
+          "values": [
+            {
+              "description": "={{ $json.output[0].content[0].text }}",
+              "image": "={{ $json.url }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        912,
+        112
+      ],
+      "id": "6583d69b-6eb9-4d3b-835f-8b9082bf59cd",
+      "name": "Discord",
+      "webhookId": "37d99a47-d8af-41ec-bc61-4557ebedb75e",
+      "executeOnce": false,
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "4xJNKOEDSFwnwC6X",
+          "name": "Discord Webhook account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generate an image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate an image": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Discord",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "dc30c3d4-5e81-45a7-ad80-beb3470b13ac",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b3048662eb99ac8b83ce43e126e7b60bbb177dfc2f5b75d19ec69617bdc02484"
+  },
+  "id": "havpy3i2_rAgkmpp2s0vb",
+  "tags": []
+}
